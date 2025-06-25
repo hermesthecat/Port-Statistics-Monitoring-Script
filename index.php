@@ -9,21 +9,21 @@
 <body>
   <div id="body">
     <?php
+    // Include configuration file
+    require_once 'config.php';
+    
+    // Check if IP is allowed (if security is enabled)
+    if (REQUIRE_AUTH && !isIpAllowed($_SERVER['REMOTE_ADDR'])) {
+        die('Access denied');
+    }
+    
     try {
-      $host    = 'localhost';
-      $db      = 'port-statistics-monitoring-script-master';
-      $user    = 'abdullah';
-      $pass    = 'azadazad';
-      $charset = 'utf8';
-      $dsn  = "mysql:host=$host;dbname=$db;charset=$charset";
-      $opt  = [
-        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES   => false,
-      ];
-      $pdo  = new PDO($dsn, $user, $pass, $opt);
+      $pdo = getDatabaseConnection();
     } catch (PDOexception $e) {
-      echo "Unable to connect to DB: " . $e->getMessage() . "";
+      $errorMsg = $errorMessages['db_connection_failed'] . ": " . $e->getMessage();
+      echo $errorMsg;
+      logError($errorMsg);
+      exit;
     }
 
     try {
@@ -39,20 +39,29 @@
         $result = array_combine($deviceid, $data);
         foreach ($result as $key => $value) {
           $id = $key;
-          $session = new SNMP(SNMP::VERSION_2c, "$value", "port-statistics-monitoring-script-master");
-          $session->valueretrieval = SNMP_VALUE_PLAIN;
-          $ifhost   = $session->get(".iso.org.dod.internet.mgmt.mib-2.interfaces.ifTable.ifEntry.ifDescr.234889216", TRUE);
-          $ifname   = $session->walk(".iso.org.dod.internet.mgmt.mib-2.ifMIB.ifMIBObjects.ifXTable.ifXEntry.ifName", TRUE);
+          try {
+            $session = new SNMP(SNMP_VERSION, "$value", SNMP_COMMUNITY);
+            $session->valueretrieval = SNMP_VALUE_PLAIN;
+            $ifhost   = $session->get($snmpOIDs['ifDescr'] . ".234889216", TRUE);
+            $ifname   = $session->walk($snmpOIDs['ifName'], TRUE);
+          } catch (Exception $e) {
+            $errorMsg = $errorMessages['snmp_connection_failed'] . " ($value): " . $e->getMessage();
+            echo $errorMsg . "<br>";
+            logError($errorMsg);
+            continue;
+          }
           foreach ($ifname as $naam => $ioid) {
             echo "" . $naam . " -/- ";
             echo "" . $ioid . "</br>";
-            try {
-              $stmt = $pdo->prepare("INSERT INTO ports (devicename, interfacename, interfaceoid, deviceid) VALUES (:devicename, :interfacename, :interfaceoid, :deviceid)
-                                            ON DUPLICATE KEY UPDATE interfaceoid = :test");
-              $stmt->execute(array(":devicename" => $ifhost, ":interfacename" => $ioid, ":interfaceoid" => $naam, ":test" => $naam, ":deviceid" => $id));
-            } catch (PDOException $e) {
-              echo "Something went wrong: " . $e->getMessage() . "";
-            }
+                          try {
+                $stmt = $pdo->prepare("INSERT INTO ports (devicename, interfacename, interfaceoid, deviceid) VALUES (:devicename, :interfacename, :interfaceoid, :deviceid)
+                                              ON DUPLICATE KEY UPDATE interfaceoid = :test");
+                $stmt->execute(array(":devicename" => $ifhost, ":interfacename" => $ioid, ":interfaceoid" => $naam, ":test" => $naam, ":deviceid" => $id));
+              } catch (PDOException $e) {
+                $errorMsg = $errorMessages['ports_insert_error'] . ": " . $e->getMessage();
+                echo $errorMsg . "<br>";
+                logError($errorMsg);
+              }
             $session->close();
           }
 
@@ -69,33 +78,46 @@
               }
 
               foreach ($combi as $ip => $oid) {
-                $session = new SNMP(SNMP::VERSION_2c, "$ip", "aQuestora");
-                $session->valueretrieval = SNMP_VALUE_PLAIN;
+                try {
+                  $session = new SNMP(SNMP_VERSION, "$ip", SNMP_COMMUNITY);
+                  $session->valueretrieval = SNMP_VALUE_PLAIN;
 
-                foreach ($oid as $bla) {
-                  $ifinerrorsoid      = ".iso.org.dod.internet.mgmt.mib-2.interfaces.ifTable.ifEntry.ifInErrors.$bla";
-                  $queryifinerrors    = $session->get("$ifinerrorsoid", TRUE);
-                  $ifhighspeedoid     = ".iso.org.dod.internet.mgmt.mib-2.ifMIB.ifMIBObjects.ifXTable.ifXEntry.ifHighSpeed.$bla";
-                  $queryifhighspeed   = $session->get("$ifhighspeedoid", TRUE);
-                  try {
-                    $datum = date("Y-m-d H:i:s");
-                    $stmt = $pdo->prepare("INSERT INTO statistics (erroroid, interfaceerror, highspeedoid, ifhighspeed, time, portid) VALUES (:erroroid, :interfaceerror, :highspeedoid, :ifhighspeed, :time, (SELECT id FROM ports WHERE deviceid = :deviceid AND interfaceoid = :interfaceoid))");
-                    $stmt->execute(array(":erroroid" => $ifinerrorsoid, ":interfaceerror" => $queryifinerrors,  ":highspeedoid" => $ifhighspeedoid, ":ifhighspeed" => $queryifhighspeed, ":time" => $datum, ":deviceid" => $id, ":interfaceoid" => $bla));
-                  } catch (PDOException $e) {
-                    echo "Something went wrong: " . $e->getMessage() . "";
+                  foreach ($oid as $bla) {
+                    $ifinerrorsoid      = $snmpOIDs['ifInErrors'] . ".$bla";
+                    $queryifinerrors    = $session->get("$ifinerrorsoid", TRUE);
+                    $ifhighspeedoid     = $snmpOIDs['ifHighSpeed'] . ".$bla";
+                    $queryifhighspeed   = $session->get("$ifhighspeedoid", TRUE);
+                                      try {
+                      $datum = date("Y-m-d H:i:s");
+                      $stmt = $pdo->prepare("INSERT INTO statistics (erroroid, interfaceerror, highspeedoid, ifhighspeed, time, portid) VALUES (:erroroid, :interfaceerror, :highspeedoid, :ifhighspeed, :time, (SELECT id FROM ports WHERE deviceid = :deviceid AND interfaceoid = :interfaceoid))");
+                      $stmt->execute(array(":erroroid" => $ifinerrorsoid, ":interfaceerror" => $queryifinerrors,  ":highspeedoid" => $ifhighspeedoid, ":ifhighspeed" => $queryifhighspeed, ":time" => $datum, ":deviceid" => $id, ":interfaceoid" => $bla));
+                    } catch (PDOException $e) {
+                      $errorMsg = $errorMessages['statistics_insert_error'] . ": " . $e->getMessage();
+                      echo $errorMsg . "<br>";
+                      logError($errorMsg);
+                    }
                   }
+                  $session->close();
+                } catch (Exception $e) {
+                  $errorMsg = $errorMessages['snmp_connection_failed'] . " ($ip): " . $e->getMessage();
+                  echo $errorMsg . "<br>";
+                  logError($errorMsg);
                 }
               }
             }
           } catch (PDOException $e) {
-            echo "Selecting interfaceoid went wrong: " . $e->getMessage() . "";
+            $errorMsg = $errorMessages['interface_select_error'] . ": " . $e->getMessage();
+            echo $errorMsg . "<br>";
+            logError($errorMsg);
           }
         }
       } else {
-        echo "No devices present.";
+        echo $errorMessages['no_devices_found'];
       }
     } catch (PDOException $e) {
-      echo "Something went wrong: " . $e->getMessage() . "";
+      $errorMsg = "Something went wrong: " . $e->getMessage();
+      echo $errorMsg . "<br>";
+      logError($errorMsg);
     }
     ?>
   </div>
