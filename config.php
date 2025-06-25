@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Configuration file for Port Statistics Monitoring Script
  * 
@@ -61,11 +62,12 @@ define('REQUIRE_AUTH', false);
  * @return PDO
  * @throws PDOException
  */
-function getDatabaseConnection() {
+function getDatabaseConnection()
+{
     global $pdoOptions;
-    
+
     $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
-    
+
     try {
         return new PDO($dsn, DB_USER, DB_PASS, $pdoOptions);
     } catch (PDOException $e) {
@@ -82,7 +84,8 @@ function getDatabaseConnection() {
  * @param string $message
  * @param string $level
  */
-function logError($message, $level = 'ERROR') {
+function logError($message, $level = 'ERROR')
+{
     if (LOG_ERRORS) {
         $timestamp = date('Y-m-d H:i:s');
         $logMessage = "[$timestamp] [$level] $message" . PHP_EOL;
@@ -95,10 +98,10 @@ function logError($message, $level = 'ERROR') {
  * @param string $ip
  * @return bool
  */
-function isIpAllowed($ip) {
+function isIpAllowed($ip)
+{
     if (empty(ALLOWED_IPS)) {
         return true;
     }
     return in_array($ip, ALLOWED_IPS);
 }
-?> 

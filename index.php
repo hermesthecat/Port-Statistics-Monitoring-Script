@@ -11,12 +11,12 @@
     <?php
     // Include configuration file
     require_once 'config.php';
-    
+
     // Check if IP is allowed (if security is enabled)
     if (REQUIRE_AUTH && !isIpAllowed($_SERVER['REMOTE_ADDR'])) {
-        die('Access denied');
+      die('Access denied');
     }
-    
+
     try {
       $pdo = getDatabaseConnection();
     } catch (PDOexception $e) {
@@ -53,15 +53,15 @@
           foreach ($ifname as $naam => $ioid) {
             echo "" . $naam . " -/- ";
             echo "" . $ioid . "</br>";
-                          try {
-                $stmt = $pdo->prepare("INSERT INTO ports (devicename, interfacename, interfaceoid, deviceid) VALUES (:devicename, :interfacename, :interfaceoid, :deviceid)
+            try {
+              $stmt = $pdo->prepare("INSERT INTO ports (devicename, interfacename, interfaceoid, deviceid) VALUES (:devicename, :interfacename, :interfaceoid, :deviceid)
                                               ON DUPLICATE KEY UPDATE interfaceoid = :test");
-                $stmt->execute(array(":devicename" => $ifhost, ":interfacename" => $ioid, ":interfaceoid" => $naam, ":test" => $naam, ":deviceid" => $id));
-              } catch (PDOException $e) {
-                $errorMsg = $errorMessages['ports_insert_error'] . ": " . $e->getMessage();
-                echo $errorMsg . "<br>";
-                logError($errorMsg);
-              }
+              $stmt->execute(array(":devicename" => $ifhost, ":interfacename" => $ioid, ":interfaceoid" => $naam, ":test" => $naam, ":deviceid" => $id));
+            } catch (PDOException $e) {
+              $errorMsg = $errorMessages['ports_insert_error'] . ": " . $e->getMessage();
+              echo $errorMsg . "<br>";
+              logError($errorMsg);
+            }
             $session->close();
           }
 
@@ -87,7 +87,7 @@
                     $queryifinerrors    = $session->get("$ifinerrorsoid", TRUE);
                     $ifhighspeedoid     = $snmpOIDs['ifHighSpeed'] . ".$bla";
                     $queryifhighspeed   = $session->get("$ifhighspeedoid", TRUE);
-                                      try {
+                    try {
                       $datum = date("Y-m-d H:i:s");
                       $stmt = $pdo->prepare("INSERT INTO statistics (erroroid, interfaceerror, highspeedoid, ifhighspeed, time, portid) VALUES (:erroroid, :interfaceerror, :highspeedoid, :ifhighspeed, :time, (SELECT id FROM ports WHERE deviceid = :deviceid AND interfaceoid = :interfaceoid))");
                       $stmt->execute(array(":erroroid" => $ifinerrorsoid, ":interfaceerror" => $queryifinerrors,  ":highspeedoid" => $ifhighspeedoid, ":ifhighspeed" => $queryifhighspeed, ":time" => $datum, ":deviceid" => $id, ":interfaceoid" => $bla));

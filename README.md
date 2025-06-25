@@ -55,3 +55,44 @@ The script now uses a configuration file (`config.php`) instead of hardcoded val
 - Optional IP-based access control
 - Error logging with timestamps
 - Debug mode for development
+
+## Dashboard Features
+
+The script now includes a modern web-based dashboard accessible via `dashboard.php`:
+
+### Main Dashboard
+
+- **Real-time Statistics**: Device count, port count, error tracking
+- **Interactive Charts**: Device status distribution, error trends over time
+- **Device Management**: View all devices with status indicators
+- **Auto-refresh**: Automatic data updates every 5 minutes
+- **Responsive Design**: Works on desktop, tablet, and mobile devices
+
+### Device Details Page
+
+- **Comprehensive Device View**: Individual device monitoring via `device-details.php?id=X`
+- **Port-level Statistics**: Detailed port information and error tracking
+- **Historical Data**: Time-series charts and statistics
+- **Real-time Status**: Current port status and performance metrics
+
+### API Endpoints
+
+- **RESTful API**: JSON endpoints for AJAX requests via `api.php`
+- **Multiple Actions**: Dashboard stats, device lists, error trends, system health
+- **Real-time Data**: Fresh data for charts and tables
+
+### Dashboard Files
+
+- `dashboard.php` - Main dashboard interface
+- `device-details.php` - Individual device monitoring
+- `api.php` - REST API endpoints
+- `dashboard.js` - JavaScript for interactivity and real-time updates
+
+### Features
+
+- 📊 **Interactive Charts** with Chart.js
+- 🔄 **Auto-refresh** functionality
+- 📱 **Responsive Design** with Bootstrap 5
+- ⚡ **Real-time Updates** via AJAX
+- 🎨 **Modern UI** with gradients and animations
+- 📈 **Historical Trends** and analytics
