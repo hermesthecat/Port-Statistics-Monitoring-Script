@@ -82,17 +82,17 @@
                     $stmt = $pdo->prepare("INSERT INTO statistics (erroroid, interfaceerror, highspeedoid, ifhighspeed, time, portid) VALUES (:erroroid, :interfaceerror, :highspeedoid, :ifhighspeed, :time, (SELECT id FROM ports WHERE deviceid = :deviceid AND interfaceoid = :interfaceoid))");
                     $stmt->execute(array(":erroroid" => $ifinerrorsoid, ":interfaceerror" => $queryifinerrors,  ":highspeedoid" => $ifhighspeedoid, ":ifhighspeed" => $queryifhighspeed, ":time" => $datum, ":deviceid" => $id, ":interfaceoid" => $bla));
                   } catch (PDOException $e) {
-                    echo "Iets gaat fout: " . $e->getMessage() . "";
+                    echo "Something went wrong: " . $e->getMessage() . "";
                   }
                 }
               }
             }
           } catch (PDOException $e) {
-            echo "Selecteren van interfaceoid ging verkeerd: " . $e->getMessage() . "";
+            echo "Selecting interfaceoid went wrong: " . $e->getMessage() . "";
           }
         }
       } else {
-        echo "Geen apparaten aanwezig.";
+        echo "No devices present.";
       }
     } catch (PDOException $e) {
       echo "Something went wrong: " . $e->getMessage() . "";
