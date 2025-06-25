@@ -60,6 +60,15 @@ try {
             $response['data'] = getSystemHealth($pdo);
             break;
 
+        case 'scheduler_trends':
+            $days = $_GET['days'] ?? 7;
+            $response['data'] = getSchedulerTrends($pdo, $days);
+            break;
+
+        case 'scheduler_stats':
+            $response['data'] = getSchedulerStats($pdo);
+            break;
+
         default:
             throw new Exception('Invalid action');
     }
@@ -275,6 +284,71 @@ function getSystemHealth($pdo)
     $health['error_rate'] = round($errorRate, 2);
 
     return $health;
+}
+
+/**
+ * Get scheduler trends for charts
+ */
+function getSchedulerTrends($pdo, $days = 7)
+{
+    // Check if collection_logs table exists
+    $tableExists = $pdo->query("SHOW TABLES LIKE 'collection_logs'")->fetch();
+    if (!$tableExists) {
+        return [];
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT 
+            DATE(start_time) as date,
+            COUNT(*) as total_runs,
+            SUM(devices_processed) as total_devices,
+            SUM(statistics_collected) as total_statistics,
+            SUM(errors) as total_errors,
+            AVG(duration) as avg_duration
+        FROM collection_logs 
+        WHERE start_time >= DATE_SUB(NOW(), INTERVAL ? DAY)
+        GROUP BY DATE(start_time)
+        ORDER BY date
+    ");
+    $stmt->execute([$days]);
+
+    return $stmt->fetchAll();
+}
+
+/**
+ * Get scheduler statistics summary
+ */
+function getSchedulerStats($pdo)
+{
+    // Check if collection_logs table exists
+    $tableExists = $pdo->query("SHOW TABLES LIKE 'collection_logs'")->fetch();
+    if (!$tableExists) {
+        return [
+            'total_runs' => 0,
+            'total_devices_processed' => 0,
+            'total_statistics_collected' => 0,
+            'total_errors' => 0,
+            'avg_duration' => 0,
+            'last_run' => null,
+            'success_rate' => 0
+        ];
+    }
+
+    $stats = [];
+
+    // Basic counts
+    $stats['total_runs'] = $pdo->query("SELECT COUNT(*) FROM collection_logs")->fetchColumn();
+    $stats['total_devices_processed'] = $pdo->query("SELECT SUM(devices_processed) FROM collection_logs")->fetchColumn();
+    $stats['total_statistics_collected'] = $pdo->query("SELECT SUM(statistics_collected) FROM collection_logs")->fetchColumn();
+    $stats['total_errors'] = $pdo->query("SELECT SUM(errors) FROM collection_logs")->fetchColumn();
+    $stats['avg_duration'] = $pdo->query("SELECT AVG(duration) FROM collection_logs")->fetchColumn();
+    $stats['last_run'] = $pdo->query("SELECT MAX(start_time) FROM collection_logs")->fetchColumn();
+
+    // Success rate
+    $successfulRuns = $pdo->query("SELECT COUNT(*) FROM collection_logs WHERE errors = 0")->fetchColumn();
+    $stats['success_rate'] = $stats['total_runs'] > 0 ? round(($successfulRuns / $stats['total_runs']) * 100, 2) : 0;
+
+    return $stats;
 }
 
 /**

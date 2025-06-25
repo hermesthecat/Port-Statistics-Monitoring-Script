@@ -1,0 +1,156 @@
+# Cron Job Examples for SNMP Data Collection Scheduler
+# 
+# This file contains example cron job configurations for automating
+# SNMP data collection using the scheduler.php script.
+# 
+# To edit your crontab, run: crontab -e
+# To view current crontab, run: crontab -l
+# To view cron logs, check: /var/log/cron or /var/log/syslog
+
+# ===========================================================================
+# BASIC EXAMPLES
+# ===========================================================================
+
+# Collect data every 15 minutes (recommended for most setups)
+*/15 * * * * cd /path/to/your/project && php scheduler.php >/dev/null 2>&1
+
+# Collect data every 5 minutes (for high-frequency monitoring)
+*/5 * * * * cd /path/to/your/project && php scheduler.php >/dev/null 2>&1
+
+# Collect data every hour (for low-frequency monitoring)
+0 * * * * cd /path/to/your/project && php scheduler.php >/dev/null 2>&1
+
+# ===========================================================================
+# ADVANCED EXAMPLES WITH OPTIONS
+# ===========================================================================
+
+# Verbose collection every 15 minutes with output logging
+*/15 * * * * cd /path/to/your/project && php scheduler.php --verbose >> /var/log/snmp-collection.log 2>&1
+
+# Force collection every hour (ignores recent data check)
+0 * * * * cd /path/to/your/project && php scheduler.php --force --verbose >> /var/log/snmp-collection.log 2>&1
+
+# Daily full collection with force option (good for maintenance)
+0 2 * * * cd /path/to/your/project && php scheduler.php --force --verbose >> /var/log/snmp-daily.log 2>&1
+
+# Collect specific device every 5 minutes
+*/5 * * * * cd /path/to/your/project && php scheduler.php --device=123 --verbose >> /var/log/snmp-device-123.log 2>&1
+
+# ===========================================================================
+# MAINTENANCE SCHEDULES
+# ===========================================================================
+
+# Weekly cleanup of old statistics (older than 30 days)
+0 3 * * 0 cd /path/to/your/project && mysql -u username -p'password' database_name -e "DELETE FROM statistics WHERE time < DATE_SUB(NOW(), INTERVAL 30 DAY);"
+
+# Daily log rotation for collection logs
+0 1 * * * cd /path/to/your/project && find /var/log/snmp-*.log -mtime +7 -delete
+
+# Monthly collection statistics email report
+0 9 1 * * cd /path/to/your/project && php -r "
+require 'config.php';
+\$pdo = getDatabaseConnection();
+\$stats = \$pdo->query('SELECT * FROM collection_stats WHERE collection_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)')->fetchAll();
+\$report = 'Monthly SNMP Collection Report:\n\n';
+foreach(\$stats as \$stat) {
+    \$report .= \$stat['collection_date'] . ': ' . \$stat['total_runs'] . ' runs, ' . \$stat['total_statistics_collected'] . ' records\n';
+}
+mail('admin@yourdomain.com', 'SNMP Collection Report', \$report);
+"
+
+# ===========================================================================
+# DEVELOPMENT AND TESTING
+# ===========================================================================
+
+# Test run every minute during development (dry-run mode)
+# * * * * * cd /path/to/your/project && php scheduler.php --dry-run --verbose >> /tmp/snmp-test.log 2>&1
+
+# One-time test of specific device
+# php scheduler.php --device=123 --dry-run --verbose
+
+# ===========================================================================
+# ENVIRONMENT-SPECIFIC EXAMPLES
+# ===========================================================================
+
+# Production environment (every 15 minutes, minimal logging)
+*/15 * * * * cd /var/www/html/snmp-monitor && php scheduler.php 2>/dev/null
+
+# Development environment (every 30 minutes, verbose logging)
+*/30 * * * * cd /home/user/snmp-monitor && php scheduler.php --verbose >> /tmp/snmp-dev.log 2>&1
+
+# Testing environment (hourly with force option)
+0 * * * * cd /opt/snmp-test && php scheduler.php --force --verbose >> /var/log/snmp-test.log 2>&1
+
+# ===========================================================================
+# SETUP INSTRUCTIONS
+# ===========================================================================
+
+# 1. Make scheduler.php executable (optional but recommended)
+# chmod +x scheduler.php
+
+# 2. Test the scheduler manually first
+# php scheduler.php --dry-run --verbose
+
+# 3. Test with a single device
+# php scheduler.php --device=1 --verbose
+
+# 4. Add to crontab
+# crontab -e
+# Add one of the examples above
+
+# 5. Monitor the logs
+# tail -f /var/log/snmp-collection.log
+
+# 6. Check if cron job is running
+# ps aux | grep scheduler.php
+
+# ===========================================================================
+# TROUBLESHOOTING
+# ===========================================================================
+
+# Common issues and solutions:
+
+# 1. Permission denied
+# - Ensure PHP is executable: which php
+# - Check file permissions: ls -la scheduler.php
+# - Run as www-data user if needed: sudo -u www-data php scheduler.php
+
+# 2. Database connection fails
+# - Check config.php database credentials
+# - Verify MySQL/MariaDB is running: systemctl status mysql
+# - Test connection: php -r "require 'config.php'; getDatabaseConnection();"
+
+# 3. SNMP errors
+# - Verify SNMP extension: php -m | grep snmp
+# - Test SNMP manually: snmpwalk -v2c -c community_string device_ip .1.3.6.1.2.1.1.1.0
+# - Check network connectivity: ping device_ip
+
+# 4. Cron not running
+# - Check cron service: systemctl status cron
+# - Verify crontab syntax: crontab -l
+# - Check cron logs: tail -f /var/log/cron
+
+# 5. Path issues
+# - Use absolute paths in cron jobs
+# - Set environment variables if needed:
+#   PATH=/usr/local/bin:/usr/bin:/bin
+#   */15 * * * * cd /path/to/project && php scheduler.php
+
+# ===========================================================================
+# MONITORING COMMANDS
+# ===========================================================================
+
+# Check recent collection runs
+# mysql -u username -p database_name -e "SELECT * FROM collection_logs ORDER BY start_time DESC LIMIT 10;"
+
+# View collection statistics
+# mysql -u username -p database_name -e "SELECT * FROM collection_stats LIMIT 30;"
+
+# Check for errors in recent runs
+# mysql -u username -p database_name -e "SELECT * FROM collection_logs WHERE errors > 0 ORDER BY start_time DESC LIMIT 5;"
+
+# Monitor real-time log
+# tail -f monitoring.log
+
+# Check scheduler process
+# ps aux | grep scheduler.php | grep -v grep 

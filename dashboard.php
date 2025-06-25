@@ -135,6 +135,9 @@
                     <li class="nav-item">
                         <a class="nav-link" href="#statistics"><i class="fas fa-chart-line me-1"></i>Statistics</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="scheduler-logs.php"><i class="fas fa-clock me-1"></i>Scheduler</a>
+                    </li>
                 </ul>
             </div>
         </div>

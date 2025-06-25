@@ -96,3 +96,79 @@ The script now includes a modern web-based dashboard accessible via `dashboard.p
 - ⚡ **Real-time Updates** via AJAX
 - 🎨 **Modern UI** with gradients and animations
 - 📈 **Historical Trends** and analytics
+
+## Scheduling & Automation
+
+The project now includes comprehensive scheduling support for automated data collection:
+
+### Command-Line Scheduler
+
+- **Automated Collection**: `scheduler.php` for cron job automation
+- **Flexible Options**: Device-specific, force collection, dry-run mode
+- **Smart Scheduling**: Avoids duplicate collection within time windows
+- **Comprehensive Logging**: Detailed logs and statistics tracking
+- **Error Handling**: Robust error management and reporting
+
+### Scheduler Features
+
+- **SNMP Connectivity Testing**: Pre-collection connectivity verification
+- **Batch Processing**: Efficient multi-device data collection
+- **Statistics Tracking**: Collection performance monitoring
+- **Configurable Options**: Verbose output, device targeting, force modes
+
+### Usage Examples
+
+```bash
+# Basic collection (recommended for cron)
+php scheduler.php
+
+# Verbose collection with output
+php scheduler.php --verbose
+
+# Force collection for all devices
+php scheduler.php --force --verbose
+
+# Collect specific device only
+php scheduler.php --device=123
+
+# Dry run (test without actual collection)
+php scheduler.php --dry-run --verbose
+
+# Show help
+php scheduler.php --help
+```
+
+### Cron Job Setup
+
+```bash
+# Every 15 minutes (recommended)
+*/15 * * * * cd /path/to/project && php scheduler.php >/dev/null 2>&1
+
+# Every 5 minutes (high frequency)
+*/5 * * * * cd /path/to/project && php scheduler.php --verbose >> /var/log/snmp-collection.log 2>&1
+
+# Hourly with logging
+0 * * * * cd /path/to/project && php scheduler.php --verbose >> /var/log/snmp-collection.log 2>&1
+```
+
+### Scheduler Monitoring
+
+- **Web Interface**: `scheduler-logs.php` for viewing collection history
+- **Performance Metrics**: Collection duration, success rates, error tracking
+- **Daily Statistics**: Aggregated daily collection statistics
+- **Trend Analysis**: Visual charts for collection performance
+- **Database Logging**: All collection runs stored in `collection_logs` table
+
+### Installation Steps
+
+1. Import additional scheduler table: `mysql -u username -p database_name < db_scheduler.sql`
+2. Test scheduler manually: `php scheduler.php --dry-run --verbose`
+3. Set up cron job using examples from `cron-examples.txt`
+4. Monitor via web interface at `scheduler-logs.php`
+
+### Files
+
+- `scheduler.php` - Main scheduler script
+- `db_scheduler.sql` - Additional database table for logging
+- `cron-examples.txt` - Cron job examples and setup instructions
+- `scheduler-logs.php` - Web interface for monitoring scheduler
